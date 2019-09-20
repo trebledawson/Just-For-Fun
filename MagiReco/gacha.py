@@ -12,6 +12,7 @@ import time
 import random
 from statistics import mean, stdev
 from math import sqrt
+from multiprocessing import Pool
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -19,7 +20,8 @@ import matplotlib.pyplot as plt
 VERBOSE = False
 
 def main():
-    prompt = input('What would you like to do? [expectation, likelihood, plot] :')
+    prompt = input(
+        'What would you like to do? [expectation, likelihood, plot] : ')
     if prompt not in ['expectation', 'likelihood', 'plot']:
         raise ValueError('Invalid input')
     elif prompt == 'expectation':
@@ -42,33 +44,38 @@ def likelihood():
         k = 10000
     else:
         k = int(k)
-        
+
     start = time.time()
-    likelihoods = pd.DataFrame(index=range(1001),
+    p = Pool()
+    likelihoods = p.map(trials,  # Ordered list of lists
+        [(i, k, ten_draws) for i in range(1001)])
+    p.close()
+    p.join()
+    
+    likelihoods = pd.DataFrame(likelihoods,
+                               index=range(1001),
                                columns=['Prob(0)', 'Prob(1)', 
                                         'Prob(2)', 'Prob(3)', 
                                         'Prob(4+)'])
-                                        
-    for n_rolls in range(1001):
-        trials = []
-        while len(trials) < k:
-            trials.append(draw_n(n_rolls, ten_draws))
-            
-        for n_banner in range(5):
-            if n_banner < 4:
-                col = 'Prob(' + str(n_banner) + ')'
-            else:
-                col = 'Prob(4+)'
-            
-            probability = trials.count(n_banner) / k
-            likelihoods.loc[n_rolls, col] = probability
-            
-        if n_rolls % 100 == 0:
-            print('Trials for', n_rolls, 'rolls completed.')
     
-    likelihoods.to_csv('gacha_likelihoods_smooth_' + str(k) + '.csv',
+    likelihoods.to_csv('gacha_likelihoods_' + str(k) + '.csv',
                        float_format='%.6f')
     print('Script runtime: {:.8f} seconds.'.format(time.time() - start))
+
+
+def trials(args):
+    trial = []
+    while len(trial) < args[1]:
+        trial.append(draw_n(args[0], args[2]))
+    
+    if args[0] % 100 == 0:
+        print('Trials for', args[0], 'rolls completed.')
+        
+    likelihood = []
+    for n_banner in range(5):
+        likelihood.append(trial.count(n_banner) / args[1])
+        
+    return likelihood
 
 
 def draw_n(n_rolls, ten_draws=True):
@@ -77,7 +84,8 @@ def draw_n(n_rolls, ten_draws=True):
     pity = 0
     while rolls < n_rolls:
         if ten_draws:
-            if pity < 90:  # Do ten-draws below 90
+            # Do ten-draws below 90 if there are more than 10 left
+            if pity < 90 and n_rolls - rolls > 10:  
                 for ten_draw in range(10):
                     roll = random.randint(0, 99)
                     rolls += 1
@@ -266,33 +274,31 @@ def find_ssr(n=4, ten_draws=True):
     return rolls, n_spook
 
 
-def plot_gacha():
-    smooth = input('Smooth plot? y/[n] : ')
-    if smooth == 'y':
-        smooth = True
-    else:
-        smooth = False
-        
+def plot_gacha():        
     k = input('How many trials? [10000] : ')
     if not k:
         k = 10000
     else:
         k = int(k)
+    filepath = 'gacha_likelihoods_' + str(k) + '.csv'
     
-    if smooth:
-        filepath = 'gacha_likelihoods_smooth_' + str(k) + '.csv'
-    else:
-        filepath = 'gacha_likelihoods_' + str(k) + '.csv'
     data = pd.read_csv(filepath, index_col=0)
     data.plot()
     plt.grid()
+    plt.xlabel('Number of draws')
+    plt.ylabel('Probability')
+    plt.title(
+        'Probability of Drawing Banner Magical Girl N Times In K Pulls')
     plt.xlim(-10, 1010)
 
     ev = data @ np.array([0, 1, 2, 3, 4])
     data['Expected Value'] = ev
-    
     data.plot(y='Expected Value', legend=False)
     plt.grid()
+    plt.xlabel('Number of draws')
+    plt.ylabel('Number of copies')
+    plt.title(
+        'Expected Number of Copies of Banner Magical Girl in K Pulls')
     plt.xlim(-10, 1010)
     plt.show()
     
