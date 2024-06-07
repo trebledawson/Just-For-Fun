@@ -118,7 +118,9 @@ def statistical_trials_with_pool():
     pool.join()
     print(f'Total computation time: {timer() - tic:.3f} seconds')
     
-    print(f'\nSet size: {n_elements}\n')
+    print(f'\n'
+          f'Set size: {n_elements}'
+          f'\n')
     
     print('===== set(x) - set(y) =====')
     for overlap in overlaps:
@@ -138,7 +140,8 @@ def statistical_trials_with_pool():
               f'Min: {results[(overlap, "key")]["min"]:.3f} ms | '
               f'Max: {results[(overlap, "key")]["max"]:.3f} ms')
     
-    print(f'\nAverage of {n_trials} trials.')
+    print(f'\n'
+          f'Average of {n_trials} trials.')
     
 
 def run_trial(overlap=1.0, n_elements=10_000):
