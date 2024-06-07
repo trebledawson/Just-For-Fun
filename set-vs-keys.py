@@ -18,7 +18,10 @@ def trend_plot():
     pool = Pool()
     for overlap in overlaps:
         overlap_tic = timer()
-        results = pool.starmap(run_trial, [(overlap, n_elements) for _ in range(n_trials)])
+        results = pool.starmap(
+            run_trial, 
+            [(overlap, n_elements) for n in range(n_trials)]
+        )
         results = np.array(results)
         set_results.append(np.mean(results[:, 0]) * 1000)
         key_results.append(np.mean(results[:, 1]) * 1000)
@@ -57,7 +60,9 @@ def statistical_trials():
             results[(overlap, 'key')].append(key_time)
     print(f'Total computation time: {timer() - full_tic:.3f} seconds')
     
-    print(f'\nSet size: {n_elements}\n')
+    print(f'\n'
+          f'Set size: {n_elements}'
+          f'\n')
     
     print('===== set(x) - set(y) =====')
     for overlap in overlaps:
@@ -77,7 +82,8 @@ def statistical_trials():
               f'Min: {np.min(results[(overlap, "key")]) * 1000:.3f} ms | '
               f'Max: {np.max(results[(overlap, "key")]) * 1000:.3f} ms')
     
-    print(f'\nAverage of {n_trials} trials.')
+    print(f'\n'
+          f'Average of {n_trials} trials.')
 
 
 def statistical_trials_with_pool():
@@ -90,7 +96,10 @@ def statistical_trials_with_pool():
     pool = Pool()
     for overlap in overlaps:
         overlap_tic = timer()
-        times = pool.starmap(run_trial, [(overlap, n_elements) for n in range(n_trials)])
+        times = pool.starmap(
+            run_trial, 
+            [(overlap, n_elements) for n in range(n_trials)]
+        )
         times = np.array(times)
         results[(overlap, 'set')] = {
             'mean': np.mean(times[:, 0]) * 1000,
